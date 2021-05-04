@@ -1,0 +1,5 @@
+error: unexpected max_values attribute for storage value.
+  --> $DIR/unexpected_max_values_on_storage_value.rs:26:13
+   |
+26 |         pub Value max_values(1): u32;
+   |                   ^^^^^^^^^^

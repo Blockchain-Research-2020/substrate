@@ -208,13 +208,13 @@ pub mod pallet {
 	pub type Map<T: Config> where T::AccountId: From<SomeType7> =
 		StorageMap<_, Blake2_128Concat, u8, u16, ValueQuery, MyDefault<T>>;
 
-	#[pallet::storage]
+	#[pallet::storage(max_values = 3)]
 	pub type Map2<T> = StorageMap<_, Twox64Concat, u16, u32>;
 
 	#[pallet::storage]
 	pub type DoubleMap<T> = StorageDoubleMap<_, Blake2_128Concat, u8, Twox64Concat, u16, u32>;
 
-	#[pallet::storage]
+	#[pallet::storage(max_values = 5)]
 	pub type DoubleMap2<T> = StorageDoubleMap<_, Twox64Concat, u16, Blake2_128Concat, u32, u64>;
 
 	#[pallet::storage]
@@ -223,7 +223,7 @@ pub mod pallet {
 	pub type ConditionalValue<T> = StorageValue<_, u32>;
 
 	#[cfg(feature = "conditional-storage")]
-	#[pallet::storage]
+	#[pallet::storage(max_values = 12)]
 	#[pallet::getter(fn conditional_map)]
 	pub type ConditionalMap<T> = StorageMap<_, Twox64Concat, u16, u32>;
 
@@ -533,7 +533,6 @@ fn pallet_expand_deposit_event() {
 #[test]
 fn storage_expand() {
 	use frame_support::pallet_prelude::*;
-	use frame_support::StoragePrefixedMap;
 
 	fn twox_64_concat(d: &[u8]) -> Vec<u8> {
 		let mut v = twox_64(d).to_vec();
@@ -880,4 +879,71 @@ fn test_pallet_info_access() {
 	assert_eq!(<System as frame_support::traits::PalletInfoAccess>::index(), 0);
 	assert_eq!(<Example as frame_support::traits::PalletInfoAccess>::index(), 1);
 	assert_eq!(<Example2 as frame_support::traits::PalletInfoAccess>::index(), 2);
+}
+
+#[test]
+fn test_storages_info() {
+	use frame_support::{
+		StorageHasher,
+		traits::{StoragesInfo, StorageInfo},
+		pallet_prelude::*,
+	};
+
+	let prefix = |pallet_name, storage_name| {
+		let mut res = [0u8; 32];
+		res[0..16].copy_from_slice(&Twox128::hash(pallet_name));
+		res[16..32].copy_from_slice(&Twox128::hash(storage_name));
+		res
+	};
+
+	assert_eq!(
+		Example::storages_info(),
+		vec![
+			StorageInfo {
+				prefix: prefix(b"Example", b"ValueWhereClause"),
+				max_values: 1,
+			},
+			StorageInfo {
+				prefix: prefix(b"Example", b"Value"),
+				max_values: 1,
+			},
+			StorageInfo {
+				prefix: prefix(b"Example", b"Map"),
+				max_values: u32::max_value(),
+			},
+			StorageInfo {
+				prefix: prefix(b"Example", b"Map2"),
+				max_values: 3,
+			},
+			StorageInfo {
+				prefix: prefix(b"Example", b"DoubleMap"),
+				max_values: u32::max_value(),
+			},
+			StorageInfo {
+				prefix: prefix(b"Example", b"DoubleMap2"),
+				max_values: 5,
+			},
+			#[cfg(feature = "conditional-storage")]
+			{
+				StorageInfo {
+					prefix: prefix(b"Example", b"ConditionalValue"),
+					max_values: 1,
+				}
+			},
+			#[cfg(feature = "conditional-storage")]
+			{
+				StorageInfo {
+					prefix: prefix(b"Example", b"ConditionalMap"),
+					max_values: 12,
+				}
+			},
+			#[cfg(feature = "conditional-storage")]
+			{
+				StorageInfo {
+					prefix: prefix(b"Example", b"ConditionalDoubleMap"),
+					max_values: u32::max_value(),
+				}
+			},
+		],
+	);
 }

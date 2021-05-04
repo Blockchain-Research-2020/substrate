@@ -56,10 +56,8 @@ mod tests {
 			GetOptU32WithBuilderNone get(fn opt_u32_with_builder_none) build(|_| None): Option<u32>;
 
 			// map non-getters: pub / $default
-			MAPU32: map hasher(blake2_128_concat) u32 => Option<String>;
+			MAPU32 max_values(3): map hasher(blake2_128_concat) u32 => Option<String>;
 			pub PUBMAPU32: map hasher(blake2_128_concat) u32 => Option<String>;
-			MAPU32MYDEF: map hasher(blake2_128_concat) u32 => Option<String>;
-			pub PUBMAPU32MYDEF: map hasher(blake2_128_concat) u32 => Option<String>;
 
 			// map getters: pub / $default
 			GETMAPU32 get(fn map_u32_getter): map hasher(blake2_128_concat) u32 => String;
@@ -69,6 +67,12 @@ mod tests {
 				map hasher(blake2_128_concat) u32 => String = "map".into();
 			pub PUBGETMAPU32MYDEF get(fn pub_map_u32_getter_mydef):
 				map hasher(blake2_128_concat) u32 => String = "pubmap".into();
+
+			DOUBLEMAP max_values(3): double_map
+				hasher(blake2_128_concat) u32, hasher(blake2_128_concat) u32 => Option<String>;
+
+			DOUBLEMAP2: double_map
+				hasher(blake2_128_concat) u32, hasher(blake2_128_concat) u32 => Option<String>;
 
 			COMPLEXTYPE1: ::std::vec::Vec<T::Origin>;
 			COMPLEXTYPE2: (Vec<Vec<(u16, Box<()>)>>, u32);
@@ -267,34 +271,6 @@ mod tests {
 					documentation: DecodeDifferent::Encode(&[]),
 				},
 				StorageEntryMetadata {
-					name: DecodeDifferent::Encode("MAPU32MYDEF"),
-					modifier: StorageEntryModifier::Optional,
-					ty: StorageEntryType::Map {
-						hasher: StorageHasher::Blake2_128Concat,
-						key: DecodeDifferent::Encode("u32"),
-						value: DecodeDifferent::Encode("String"),
-						unused: false,
-					},
-					default: DecodeDifferent::Encode(
-						DefaultByteGetter(&__GetByteStructMAPU32MYDEF(PhantomData::<TraitImpl>))
-					),
-					documentation: DecodeDifferent::Encode(&[]),
-				},
-				StorageEntryMetadata {
-					name: DecodeDifferent::Encode("PUBMAPU32MYDEF"),
-					modifier: StorageEntryModifier::Optional,
-					ty: StorageEntryType::Map {
-						hasher: StorageHasher::Blake2_128Concat,
-						key: DecodeDifferent::Encode("u32"),
-						value: DecodeDifferent::Encode("String"),
-						unused: false,
-					},
-					default: DecodeDifferent::Encode(
-						DefaultByteGetter(&__GetByteStructPUBMAPU32MYDEF(PhantomData::<TraitImpl>))
-					),
-					documentation: DecodeDifferent::Encode(&[]),
-				},
-				StorageEntryMetadata {
 					name: DecodeDifferent::Encode("GETMAPU32"),
 					modifier: StorageEntryModifier::Default,
 					ty: StorageEntryType::Map {
@@ -351,6 +327,36 @@ mod tests {
 					documentation: DecodeDifferent::Encode(&[]),
 				},
 				StorageEntryMetadata {
+					name: DecodeDifferent::Encode("DOUBLEMAP"),
+					modifier: StorageEntryModifier::Optional,
+					ty: StorageEntryType::DoubleMap {
+						hasher: StorageHasher::Blake2_128Concat,
+						key1: DecodeDifferent::Encode("u32"),
+						key2: DecodeDifferent::Encode("u32"),
+						value: DecodeDifferent::Encode("String"),
+						key2_hasher: StorageHasher::Blake2_128Concat,
+					},
+					default: DecodeDifferent::Encode(
+						DefaultByteGetter(&__GetByteStructDOUBLEMAP(PhantomData::<TraitImpl>))
+					),
+					documentation: DecodeDifferent::Encode(&[]),
+				},
+				StorageEntryMetadata {
+					name: DecodeDifferent::Encode("DOUBLEMAP2"),
+					modifier: StorageEntryModifier::Optional,
+					ty: StorageEntryType::DoubleMap {
+						hasher: StorageHasher::Blake2_128Concat,
+						key1: DecodeDifferent::Encode("u32"),
+						key2: DecodeDifferent::Encode("u32"),
+						value: DecodeDifferent::Encode("String"),
+						key2_hasher: StorageHasher::Blake2_128Concat,
+					},
+					default: DecodeDifferent::Encode(
+						DefaultByteGetter(&__GetByteStructDOUBLEMAP2(PhantomData::<TraitImpl>))
+					),
+					documentation: DecodeDifferent::Encode(&[]),
+				},
+				StorageEntryMetadata {
 					name: DecodeDifferent::Encode("COMPLEXTYPE1"),
 					modifier: StorageEntryModifier::Default,
 					ty: StorageEntryType::Plain(DecodeDifferent::Encode("::std::vec::Vec<T::Origin>")),
@@ -380,6 +386,134 @@ mod tests {
 			]
 		),
 	};
+
+	#[test]
+	fn storages_info() {
+		use frame_support::{
+			StorageHasher,
+			traits::{StoragesInfo, StorageInfo},
+			pallet_prelude::*,
+		};
+		let prefix = |pallet_name, storage_name| {
+			let mut res = [0u8; 32];
+			res[0..16].copy_from_slice(&Twox128::hash(pallet_name));
+			res[16..32].copy_from_slice(&Twox128::hash(storage_name));
+			res
+		};
+		pretty_assertions::assert_eq!(
+			<Module<TraitImpl>>::storages_info(),
+			vec![
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"U32"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"PUBU32"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"U32MYDEF"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"PUBU32MYDEF"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"GETU32"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"PUBGETU32"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"GETU32WITHCONFIG"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"PUBGETU32WITHCONFIG"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"GETU32MYDEF"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"PUBGETU32MYDEF"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"GETU32WITHCONFIGMYDEF"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"PUBGETU32WITHCONFIGMYDEF"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"PUBGETU32WITHCONFIGMYDEFOPT"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"GetU32WithBuilder"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"GetOptU32WithBuilderSome"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"GetOptU32WithBuilderNone"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"MAPU32"),
+					max_values: 3,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"PUBMAPU32"),
+					max_values: u32::max_value(),
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"GETMAPU32"),
+					max_values: u32::max_value(),
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"PUBGETMAPU32"),
+					max_values: u32::max_value(),
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"GETMAPU32MYDEF"),
+					max_values: u32::max_value(),
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"PUBGETMAPU32MYDEF"),
+					max_values: u32::max_value(),
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"DOUBLEMAP"),
+					max_values: 3,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"DOUBLEMAP2"),
+					max_values: u32::max_value(),
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"COMPLEXTYPE1"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"COMPLEXTYPE2"),
+					max_values: 1,
+				},
+				StorageInfo {
+					prefix: prefix(b"TestStorage", b"COMPLEXTYPE3"),
+					max_values: 1,
+				},
+			],
+		);
+	}
 
 	#[test]
 	fn store_metadata() {

@@ -1234,7 +1234,9 @@ pub mod pallet_prelude {
 		EqNoBound, PartialEqNoBound, RuntimeDebugNoBound, DebugNoBound, CloneNoBound, Twox256,
 		Twox128, Blake2_256, Blake2_128, Identity, Twox64Concat, Blake2_128Concat, ensure,
 		RuntimeDebug, storage,
-		traits::{Get, Hooks, IsType, GetPalletVersion, EnsureOrigin, PalletInfoAccess},
+		traits::{
+			Get, Hooks, IsType, GetPalletVersion, EnsureOrigin, PalletInfoAccess, StoragesInfo,
+		},
 		dispatch::{DispatchResultWithPostInfo, Parameter, DispatchError, DispatchResult},
 		weights::{DispatchClass, Pays, Weight},
 		storage::types::{StorageValue, StorageMap, StorageDoubleMap, ValueQuery, OptionQuery},
@@ -1552,7 +1554,7 @@ pub mod pallet_prelude {
 ///
 /// If `#[pallet::generate_deposit]` then macro implement `fn deposit_event` on `Pallet`.
 ///
-/// # Storage: `#[pallet::storage]` optional
+/// # Storage: `#[pallet::storage]` (or #[pallet::storage(max_values = $expr)]) optional
 ///
 /// Allow to define some abstract storage inside runtime storage and also set its metadata.
 /// This attribute can be used multiple times.
@@ -1575,6 +1577,17 @@ pub mod pallet_prelude {
 ///
 /// The optional attribute `#[pallet::getter(fn $my_getter_fn_name)]` allow to define a
 /// getter function on `Pallet`.
+///
+/// attribute can also specifies the max number of values in the storage with the syntax:
+/// `#pallet::storage(max_values = $expr)]` where `$expr` is a rust expression returning a u32.
+/// Note that storage value doesn't accept a max number of values to be set, as it always stores
+/// only 1 value.
+/// This max number of values is not enforced by the storage.
+/// This number is then used when implemeneting [`frame_support::traits::StoragesInfo`] on the
+/// pallet struct. This trait is used to compute the worst case PoV size for items in the
+/// storage.
+/// If not provided the macro will consider it unbounded, thus accepting `u32::max_values` maximum
+/// number of values in the storage.
 ///
 /// E.g:
 /// ```ignore
@@ -1894,7 +1907,7 @@ pub mod pallet_prelude {
 /// 		StorageValue<_, T::Balance, ValueQuery, MyDefault<T>>;
 ///
 /// 	// Another storage declaration
-/// 	#[pallet::storage]
+/// 	#[pallet::storage(max_values = 10_000)]
 /// 	#[pallet::getter(fn my_storage)]
 /// 	pub(super) type MyStorage<T> = StorageMap<_, Blake2_128Concat, u32, u32>;
 ///
@@ -2035,7 +2048,7 @@ pub mod pallet_prelude {
 /// 	pub(super) type MyStorageValue<T: Config<I>, I: 'static = ()> =
 /// 		StorageValue<_, T::Balance, ValueQuery, MyDefault<T, I>>;
 ///
-/// 	#[pallet::storage]
+/// 	#[pallet::storage(max_values = 10_000)]
 /// 	#[pallet::getter(fn my_storage)]
 /// 	pub(super) type MyStorage<T, I = ()> =
 /// 		StorageMap<_, Blake2_128Concat, u32, u32>;

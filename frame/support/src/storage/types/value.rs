@@ -88,6 +88,13 @@ where
 	QueryKind: QueryKindTrait<Value, OnEmpty>,
 	OnEmpty: crate::traits::Get<QueryKind::Query> + 'static,
 {
+	/// The prefix used by the storage.
+	///
+	/// E.g. `concat(twox128(Prefix::pallet_prefix()), twox128(Prefix::STORAGE_PREFIX))`
+	pub fn final_prefix() -> [u8; 32] {
+		Self::hashed_key()
+	}
+
 	/// Get the storage key.
 	pub fn hashed_key() -> [u8; 32] { <Self as crate::storage::StorageValue<Value>>::hashed_key() }
 

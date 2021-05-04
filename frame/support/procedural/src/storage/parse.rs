@@ -25,6 +25,7 @@ mod keyword {
 	syn::custom_keyword!(add_extra_genesis);
 	syn::custom_keyword!(extra_genesis_skip_phantom_data_field);
 	syn::custom_keyword!(config);
+	syn::custom_keyword!(max_values);
 	syn::custom_keyword!(build);
 	syn::custom_keyword!(get);
 	syn::custom_keyword!(map);
@@ -159,6 +160,7 @@ struct DeclStorageLine {
 	pub name: Ident,
 	pub getter: Opt<DeclStorageGetter>,
 	pub config: Opt<DeclStorageConfig>,
+	pub max_values: Opt<DeclStorageMaxValues>,
 	pub build: Opt<DeclStorageBuild>,
 	pub coldot_token: Token![:],
 	pub storage_type: DeclStorageType,
@@ -186,6 +188,14 @@ struct DeclStorageConfig {
 }
 
 impl_parse_for_opt!(DeclStorageConfig => keyword::config);
+
+#[derive(Parse, ToTokens, Debug)]
+struct DeclStorageMaxValues {
+	pub max_values_keyword: keyword::max_values,
+	pub expr: ext::Parens<syn::Expr>,
+}
+
+impl_parse_for_opt!(DeclStorageMaxValues=> keyword::max_values);
 
 #[derive(Parse, ToTokens, Debug)]
 struct DeclStorageBuild {
@@ -472,6 +482,22 @@ fn parse_storage_line_defs(
 			})?;
 		}
 
+		let max_values = match &line.storage_type {
+			DeclStorageType::Map(_) | DeclStorageType::DoubleMap(_) => {
+				line.max_values.inner.map(|i| i.expr.content)
+					.unwrap_or(syn::parse_quote!(u32::max_value()))
+			},
+			DeclStorageType::Simple(_) => {
+				if let Some(max_values) = line.max_values.inner {
+					let msg = "unexpected max_values attribute for storage value.";
+					let span = max_values.max_values_keyword.span();
+					return Err(syn::Error::new(span, msg));
+				} else {
+					syn::parse_quote!(1u32)
+				}
+			},
+		};
+
 		let span = line.storage_type.span();
 		let no_hasher_error = || syn::Error::new(
 			span,
@@ -504,6 +530,7 @@ fn parse_storage_line_defs(
 			name: line.name,
 			getter,
 			config,
+			max_values,
 			build: line.build.inner.map(|o| o.expr.content),
 			default_value: line.default_value.inner.map(|o| o.expr),
 			storage_type,

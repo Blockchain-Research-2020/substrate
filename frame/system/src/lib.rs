@@ -527,7 +527,7 @@ pub mod pallet {
 	pub type Origin<T> = RawOrigin<<T as Config>::AccountId>;
 
 	/// The full account information for a particular account ID.
-	#[pallet::storage]
+	#[pallet::storage(max_values = 3)]
 	#[pallet::getter(fn account)]
 	pub type Account<T: Config> = StorageMap<
 		_,

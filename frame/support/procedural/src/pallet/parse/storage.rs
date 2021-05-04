@@ -93,6 +93,9 @@ pub struct StorageDef {
 	pub attr_span: proc_macro2::Span,
 	/// The `cfg` attributes.
 	pub cfg_attrs: Vec<syn::Attribute>,
+	/// The `max_values` expression if given the attribute `#[pallet::storage(max_values = $expr)]`
+	/// or a default.
+	pub max_values: syn::Expr,
 }
 
 /// In `Foo<A, B, C>` retrieve the argument at given position, i.e. A is argument at position 0.
@@ -118,6 +121,8 @@ fn retrieve_arg(
 impl StorageDef {
 	pub fn try_from(
 		attr_span: proc_macro2::Span,
+		// some if attribute contains it. E.g. `#[pallet::storage(max_values = $expr)]`
+		attr_max_values: Option<syn::Expr>,
 		index: usize,
 		item: &mut syn::Item,
 	) -> syn::Result<Self> {
@@ -155,27 +160,38 @@ impl StorageDef {
 		}
 
 		let query_kind;
-		let metadata = match &*typ.path.segments[0].ident.to_string() {
+		let metadata;
+		let max_values;
+
+		match &*typ.path.segments[0].ident.to_string() {
 			"StorageValue" => {
 				query_kind = retrieve_arg(&typ.path.segments[0], 2);
-				Metadata::Value {
+				metadata = Metadata::Value {
 					value: retrieve_arg(&typ.path.segments[0], 1)?,
+				};
+				if attr_max_values.is_some() {
+					let msg = "Invalid pallet::storage, expect no max_values attributes for
+						`StorageValue`, i.e. only `#[pallet::storage]`";
+					return Err(syn::Error::new(attr_span, msg));
 				}
+				max_values = syn::parse_quote!(1u32);
 			}
 			"StorageMap" => {
 				query_kind = retrieve_arg(&typ.path.segments[0], 4);
-				Metadata::Map {
+				metadata = Metadata::Map {
 					key: retrieve_arg(&typ.path.segments[0], 2)?,
 					value: retrieve_arg(&typ.path.segments[0], 3)?,
-				}
+				};
+				max_values = attr_max_values.unwrap_or_else(|| syn::parse_quote!(u32::max_value()));
 			}
 			"StorageDoubleMap" => {
 				query_kind = retrieve_arg(&typ.path.segments[0], 6);
-				Metadata::DoubleMap {
+				metadata = Metadata::DoubleMap {
 					key1: retrieve_arg(&typ.path.segments[0], 2)?,
 					key2: retrieve_arg(&typ.path.segments[0], 4)?,
 					value: retrieve_arg(&typ.path.segments[0], 5)?,
-				}
+				};
+				max_values = attr_max_values.unwrap_or_else(|| syn::parse_quote!(u32::max_value()));
 			}
 			found => {
 				let msg = format!(
@@ -187,6 +203,7 @@ impl StorageDef {
 				return Err(syn::Error::new(item.ty.span(), msg));
 			}
 		};
+
 		let query_kind = query_kind
 			.map(|query_kind| match query_kind {
 				syn::GenericArgument::Type(syn::Type::Path(path))
@@ -228,6 +245,7 @@ impl StorageDef {
 			query_kind,
 			where_clause,
 			cfg_attrs,
+			max_values,
 		})
 	}
 }

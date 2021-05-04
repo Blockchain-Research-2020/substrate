@@ -130,6 +130,13 @@ where
 	QueryKind: QueryKindTrait<Value, OnEmpty>,
 	OnEmpty: crate::traits::Get<QueryKind::Query> + 'static,
 {
+	/// The prefix used by the storage.
+	///
+	/// E.g. `concat(twox128(Prefix::pallet_prefix()), twox128(Prefix::STORAGE_PREFIX))`
+	pub fn final_prefix() -> [u8; 32] {
+		<Self as crate::storage::StoragePrefixedMap<Value>>::final_prefix()
+	}
+
 	/// Get the storage key used to fetch a value corresponding to a specific key.
 	pub fn hashed_key_for<KeyArg: EncodeLike<Key>>(key: KeyArg) -> Vec<u8> {
 		<Self as crate::storage::StorageMap<Key, Value>>::hashed_key_for(key)

@@ -120,8 +120,8 @@ impl Def {
 					origin = Some(origin::OriginDef::try_from(index, item)?),
 				Some(PalletAttr::Inherent(_)) if inherent.is_none() =>
 					inherent = Some(inherent::InherentDef::try_from(index, item)?),
-				Some(PalletAttr::Storage(span)) =>
-					storages.push(storage::StorageDef::try_from(span, index, item)?),
+				Some(PalletAttr::Storage { span, max_values }) =>
+					storages.push(storage::StorageDef::try_from(span, max_values, index, item)?),
 				Some(PalletAttr::ValidateUnsigned(_)) if validate_unsigned.is_none() => {
 					let v = validate_unsigned::ValidateUnsignedDef::try_from(index, item)?;
 					validate_unsigned = Some(v);
@@ -379,6 +379,7 @@ mod keyword {
 	syn::custom_keyword!(generate_store);
 	syn::custom_keyword!(Store);
 	syn::custom_keyword!(extra_constants);
+	syn::custom_keyword!(max_values);
 }
 
 /// Parse attributes for item in pallet module
@@ -392,7 +393,12 @@ enum PalletAttr {
 	Event(proc_macro2::Span),
 	Origin(proc_macro2::Span),
 	Inherent(proc_macro2::Span),
-	Storage(proc_macro2::Span),
+	Storage {
+		span: proc_macro2::Span,
+		// if attribute is `#[pallet::storage(max_values = $expr)]` then it contains `Some(expr)`
+		// otherwise it is None.
+		max_values: Option<syn::Expr>,
+	},
 	GenesisConfig(proc_macro2::Span),
 	GenesisBuild(proc_macro2::Span),
 	ValidateUnsigned(proc_macro2::Span),
@@ -411,7 +417,7 @@ impl PalletAttr {
 			Self::Event(span) => *span,
 			Self::Origin(span) => *span,
 			Self::Inherent(span) => *span,
-			Self::Storage(span) => *span,
+			Self::Storage {span, ..} => *span,
 			Self::GenesisConfig(span) => *span,
 			Self::GenesisBuild(span) => *span,
 			Self::ValidateUnsigned(span) => *span,
@@ -446,8 +452,6 @@ impl syn::parse::Parse for PalletAttr {
 			Ok(PalletAttr::Origin(content.parse::<keyword::origin>()?.span()))
 		} else if lookahead.peek(keyword::inherent) {
 			Ok(PalletAttr::Inherent(content.parse::<keyword::inherent>()?.span()))
-		} else if lookahead.peek(keyword::storage) {
-			Ok(PalletAttr::Storage(content.parse::<keyword::storage>()?.span()))
 		} else if lookahead.peek(keyword::genesis_config) {
 			Ok(PalletAttr::GenesisConfig(content.parse::<keyword::genesis_config>()?.span()))
 		} else if lookahead.peek(keyword::genesis_build) {
@@ -458,6 +462,23 @@ impl syn::parse::Parse for PalletAttr {
 			Ok(PalletAttr::TypeValue(content.parse::<keyword::type_value>()?.span()))
 		} else if lookahead.peek(keyword::extra_constants) {
 			Ok(PalletAttr::ExtraConstants(content.parse::<keyword::extra_constants>()?.span()))
+		} else if lookahead.peek(keyword::storage) {
+			let span = content.parse::<keyword::storage>()?.span();
+			if content.is_empty() {
+				Ok(PalletAttr::Storage { span, max_values: None })
+			} else if content.peek(syn::token::Paren) {
+				let storage_content;
+				syn::parenthesized!(storage_content in content);
+				storage_content.parse::<keyword::max_values>()?;
+				storage_content.parse::<syn::Token![=]>()?;
+				let max_values = storage_content.parse::<syn::Expr>()?;
+
+				Ok(PalletAttr::Storage { span, max_values: Some(max_values) })
+			} else {
+				let msg = format!("Invalid attribute, expect `(max_values = $expr)` or end of \
+					input. e.g. `#[pallet::storage(max_values = 3)] or `#[pallet::storage]`");
+				Err(syn::Error::new(content.span(), msg))
+			}
 		} else {
 			Err(lookahead.error())
 		}

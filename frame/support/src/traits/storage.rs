@@ -45,3 +45,29 @@ pub trait StorageInstance {
 	/// Prefix given to a storage to isolate from other storages in the pallet.
 	const STORAGE_PREFIX: &'static str;
 }
+
+/// Some info about a storage in a pallet.
+#[derive(codec::Encode, codec::Decode, crate::RuntimeDebug, Eq, PartialEq, Clone)]
+pub struct StorageInfo {
+	/// The prefix of the storage. All keys after the prefix are considered part of the storage
+	pub prefix: [u8; 32],
+	/// The maximum number of values in the storage.
+	pub max_values: u32,
+}
+
+/// A trait to give information about storages.
+///
+/// It can be used to calculate PoV worst case size.
+pub trait StoragesInfo {
+	fn storages_info() -> Vec<StorageInfo>;
+}
+
+#[impl_trait_for_tuples::impl_for_tuples(30)]
+impl StoragesInfo for Tuple {
+	fn storages_info() -> Vec<StorageInfo> {
+		let mut res = vec![];
+		for_tuples!( #( res.extend_from_slice(&Tuple::storages_info()); )* );
+		res
+	}
+}
+

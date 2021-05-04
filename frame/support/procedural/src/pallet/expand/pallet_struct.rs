@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::pallet::{Def, parse::helper::get_doc_literals};
+use crate::pallet::{Def, expand::merge_where_clauses, parse::helper::get_doc_literals};
 
 /// * Add derive trait on Pallet
 /// * Implement GetPalletVersion on Pallet
@@ -24,6 +24,7 @@ use crate::pallet::{Def, parse::helper::get_doc_literals};
 /// * declare Module type alias for construct_runtime
 /// * replace the first field type of `struct Pallet` with `PhantomData` if it is `_`
 /// * implementation of `PalletInfoAccess` information
+/// * implementation of `StoragesInfo` on Pallet
 pub fn expand_pallet_struct(def: &mut Def) -> proc_macro2::TokenStream {
 	let frame_support = &def.frame_support;
 	let frame_system = &def.frame_system;
@@ -32,6 +33,10 @@ pub fn expand_pallet_struct(def: &mut Def) -> proc_macro2::TokenStream {
 	let type_decl_gen = &def.type_decl_generics(def.pallet_struct.attr_span);
 	let pallet_ident = &def.pallet_struct.pallet;
 	let config_where_clause = &def.config.where_clause;
+
+	let mut storages_where_clauses = vec![&def.config.where_clause];
+	storages_where_clauses.extend(def.storages.iter().map(|storage| &storage.where_clause));
+	let storages_where_clauses = merge_where_clauses(&storages_where_clauses);
 
 	let pallet_item = {
 		let pallet_module_items = &mut def.item.content.as_mut().expect("Checked by def").1;
@@ -97,6 +102,10 @@ pub fn expand_pallet_struct(def: &mut Def) -> proc_macro2::TokenStream {
 		)
 	};
 
+	let storage_names = &def.storages.iter().map(|storage| &storage.ident).collect::<Vec<_>>();
+	let storage_cfg_attrs = &def.storages.iter().map(|storage| &storage.cfg_attrs).collect::<Vec<_>>();
+	let storage_max_values= &def.storages.iter().map(|storage| &storage.max_values).collect::<Vec<_>>();
+
 	quote::quote_spanned!(def.pallet_struct.attr_span =>
 		#module_error_metadata
 
@@ -155,6 +164,27 @@ pub fn expand_pallet_struct(def: &mut Def) -> proc_macro2::TokenStream {
 				>::name::<Self>()
 					.expect("Pallet is part of the runtime because pallet `Config` trait is \
 						implemented by the runtime")
+			}
+		}
+
+		impl<#type_impl_gen> #frame_support::traits::StoragesInfo
+			for #pallet_ident<#type_use_gen>
+			#storages_where_clauses
+		{
+			fn storages_info()
+				-> #frame_support::sp_std::vec::Vec<#frame_support::traits::StorageInfo>
+			{
+				#frame_support::sp_std::vec![
+					#(
+						#(#storage_cfg_attrs)*
+						{
+							#frame_support::traits::StorageInfo {
+								prefix: <#storage_names<#type_use_gen>>::final_prefix(),
+								max_values: #storage_max_values,
+							}
+						},
+					)*
+				]
 			}
 		}
 	)
