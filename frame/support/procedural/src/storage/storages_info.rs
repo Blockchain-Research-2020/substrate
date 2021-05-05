@@ -27,8 +27,17 @@ pub fn impl_storages_info(scrate: &TokenStream, def: &DeclStorageDefExt) -> Toke
 	for line in def.storage_lines.iter() {
 		let storage_struct = &line.storage_struct;
 		let value_type = &line.value_type;
-		let max_values = &line.max_values;
 		let storage_generator_trait = &line.storage_generator_trait;
+
+		let max_values = if let Some(max_values) = &line.max_values {
+			quote::quote!({
+				let max_values: u32 = (|| #max_values)();
+				Some(max_values)
+			})
+		} else {
+			quote::quote!(None)
+		};
+
 		let entry = match &line.storage_type {
 			StorageLineTypeDef::Simple(_) => quote!(
 				#scrate::traits::StorageInfo {
@@ -36,6 +45,7 @@ pub fn impl_storages_info(scrate: &TokenStream, def: &DeclStorageDefExt) -> Toke
 						#storage_struct as #scrate::#storage_generator_trait
 					>::storage_value_final_key(),
 					max_values: #max_values,
+					max_size: None,
 				},
 			),
 			StorageLineTypeDef::Map(_)| StorageLineTypeDef::DoubleMap(_) => quote!(
@@ -44,6 +54,7 @@ pub fn impl_storages_info(scrate: &TokenStream, def: &DeclStorageDefExt) -> Toke
 						#storage_struct as #scrate::StoragePrefixedMap<#value_type>
 					>::final_prefix(),
 					max_values: #max_values,
+					max_size: None,
 				},
 			),
 		};

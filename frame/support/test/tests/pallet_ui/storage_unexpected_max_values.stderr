@@ -1,5 +1,5 @@
 error: Invalid pallet::storage, expect no max_values attributes for
-`StorageValue`, i.e. only `#[pallet::storage]`
+`StorageValue` as it is always `1`, expect `#[pallet::storage]`
   --> $DIR/storage_unexpected_max_values.rs:18:12
    |
 18 |     #[pallet::storage(max_values = 4u32)]

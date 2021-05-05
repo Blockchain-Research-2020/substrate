@@ -1,0 +1,8 @@
+error[E0277]: the trait bound `Vec<u32>: MaxEncodedLen` is not satisfied
+  --> $DIR/storage_invalid_storage_max_encoded_len.rs:10:12
+   |
+10 |     #[pallet::set_storage_max_encoded_len]
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `MaxEncodedLen` is not implemented for `Vec<u32>`
+   |
+   = note: required because of the requirements on the impl of `StorageMaxEncodedLen` for `frame_support::pallet_prelude::StorageValue<_GeneratedPrefixForStorageFoo<T>, Vec<u32>>`
+   = note: required by `storage_max_encoded_len`

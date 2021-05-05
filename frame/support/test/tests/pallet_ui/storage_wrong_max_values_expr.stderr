@@ -1,5 +1,13 @@
 error[E0308]: mismatched types
   --> $DIR/storage_wrong_max_values_expr.rs:18:33
    |
+9  |     #[pallet::pallet]
+   |               ------ expected due to this
+...
 18 |     #[pallet::storage(max_values = 4u64)]
    |                                    ^^^^ expected `u32`, found `u64`
+   |
+help: change the type of the numeric literal from `u64` to `u32`
+   |
+18 |     #[pallet::storage(max_values = 4u32)]
+   |                                    ^^^^

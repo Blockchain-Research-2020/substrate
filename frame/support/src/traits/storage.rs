@@ -17,6 +17,8 @@
 
 //! Traits for encoding data related to pallet's storage items.
 
+use sp_std::prelude::*;
+
 /// An instance of a pallet in the storage.
 ///
 /// It is required that these instances are unique, to support multiple instances per pallet in the same runtime!
@@ -51,8 +53,10 @@ pub trait StorageInstance {
 pub struct StorageInfo {
 	/// The prefix of the storage. All keys after the prefix are considered part of the storage
 	pub prefix: [u8; 32],
-	/// The maximum number of values in the storage.
-	pub max_values: u32,
+	/// The maximum number of values in the storage, or none if no maximum specified.
+	pub max_values: Option<u32>,
+	/// The maximum size of key/values in the storage, or none if no maximum specified.
+	pub max_size: Option<u32>,
 }
 
 /// A trait to give information about storages.
@@ -71,3 +75,7 @@ impl StoragesInfo for Tuple {
 	}
 }
 
+/// A trait that specify the maximum length for an encoded length for a storage.
+pub trait StorageMaxEncodedLen {
+	fn storage_max_encoded_len() -> u32;
+}

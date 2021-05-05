@@ -185,8 +185,8 @@ pub struct StorageLineDef {
 	getter: Option<syn::Ident>,
 	/// The name of the field to be used in genesis config if any.
 	config: Option<syn::Ident>,
-	/// The given max values with `max_values` attribute, or a sensible default expression.
-	max_values: syn::Expr,
+	/// The given max values with `max_values` attribute, or a none if not specified.
+	max_values: Option<syn::Expr>,
 	/// The build function of the storage if any.
 	build: Option<syn::Expr>,
 	/// Default value of genesis config field and also for storage when no value available.
@@ -204,8 +204,8 @@ pub struct StorageLineDefExt {
 	getter: Option<syn::Ident>,
 	/// The name of the field to be used in genesis config if any.
 	config: Option<syn::Ident>,
-	/// The given max values with `max_values` attribute, or a sensible default expression.
-	max_values: syn::Expr,
+	/// The given max values with `max_values` attribute, or a none if not specified.
+	max_values: Option<syn::Expr>,
 	/// The build function of the storage if any.
 	build: Option<syn::Expr>,
 	/// Default value of genesis config field and also for storage when no value available.

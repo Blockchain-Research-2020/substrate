@@ -901,47 +901,56 @@ fn test_storages_info() {
 		vec![
 			StorageInfo {
 				prefix: prefix(b"Example", b"ValueWhereClause"),
-				max_values: 1,
+				max_values: Some(1),
+				max_size: None,
 			},
 			StorageInfo {
 				prefix: prefix(b"Example", b"Value"),
-				max_values: 1,
+				max_values: Some(1),
+				max_size: None,
 			},
 			StorageInfo {
 				prefix: prefix(b"Example", b"Map"),
-				max_values: u32::max_value(),
+				max_values: Some(u32::max_value()),
+				max_size: None,
 			},
 			StorageInfo {
 				prefix: prefix(b"Example", b"Map2"),
-				max_values: 3,
+				max_values: Some(3),
+				max_size: None,
 			},
 			StorageInfo {
 				prefix: prefix(b"Example", b"DoubleMap"),
-				max_values: u32::max_value(),
+				max_values: Some(u32::max_value()),
+				max_size: None,
 			},
 			StorageInfo {
 				prefix: prefix(b"Example", b"DoubleMap2"),
-				max_values: 5,
+				max_values: Some(5),
+				max_size: None,
 			},
 			#[cfg(feature = "conditional-storage")]
 			{
 				StorageInfo {
 					prefix: prefix(b"Example", b"ConditionalValue"),
-					max_values: 1,
+					max_values: Some(1),
+					max_size: None,
 				}
 			},
 			#[cfg(feature = "conditional-storage")]
 			{
 				StorageInfo {
 					prefix: prefix(b"Example", b"ConditionalMap"),
-					max_values: 12,
+					max_values: Some(12),
+					max_size: None,
 				}
 			},
 			#[cfg(feature = "conditional-storage")]
 			{
 				StorageInfo {
 					prefix: prefix(b"Example", b"ConditionalDoubleMap"),
-					max_values: u32::max_value(),
+					max_values: Some(u32::max_value()),
+					max_size: None,
 				}
 			},
 		],

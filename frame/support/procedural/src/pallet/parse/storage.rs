@@ -95,7 +95,7 @@ pub struct StorageDef {
 	pub cfg_attrs: Vec<syn::Attribute>,
 	/// The `max_values` expression if given the attribute `#[pallet::storage(max_values = $expr)]`
 	/// or a default.
-	pub max_values: syn::Expr,
+	pub max_values: Option<syn::Expr>,
 }
 
 /// In `Foo<A, B, C>` retrieve the argument at given position, i.e. A is argument at position 0.
@@ -171,10 +171,10 @@ impl StorageDef {
 				};
 				if attr_max_values.is_some() {
 					let msg = "Invalid pallet::storage, expect no max_values attributes for
-						`StorageValue`, i.e. only `#[pallet::storage]`";
+						`StorageValue` as it is always `1`, expect `#[pallet::storage]`";
 					return Err(syn::Error::new(attr_span, msg));
 				}
-				max_values = syn::parse_quote!(1u32);
+				max_values = Some(syn::parse_quote!(1));
 			}
 			"StorageMap" => {
 				query_kind = retrieve_arg(&typ.path.segments[0], 4);
@@ -182,7 +182,7 @@ impl StorageDef {
 					key: retrieve_arg(&typ.path.segments[0], 2)?,
 					value: retrieve_arg(&typ.path.segments[0], 3)?,
 				};
-				max_values = attr_max_values.unwrap_or_else(|| syn::parse_quote!(u32::max_value()));
+				max_values = attr_max_values;
 			}
 			"StorageDoubleMap" => {
 				query_kind = retrieve_arg(&typ.path.segments[0], 6);
@@ -191,7 +191,7 @@ impl StorageDef {
 					key2: retrieve_arg(&typ.path.segments[0], 4)?,
 					value: retrieve_arg(&typ.path.segments[0], 5)?,
 				};
-				max_values = attr_max_values.unwrap_or_else(|| syn::parse_quote!(u32::max_value()));
+				max_values = attr_max_values;
 			}
 			found => {
 				let msg = format!(

@@ -24,9 +24,10 @@ use crate::{
 		bounded_vec::{BoundedVec, BoundedVecValue},
 		types::{OptionQuery, QueryKindTrait, OnEmptyGetter},
 	},
-	traits::{GetDefault, StorageInstance, Get},
+	traits::{GetDefault, StorageInstance, Get, MaxEncodedLen, StorageMaxEncodedLen},
 };
 use frame_metadata::{DefaultByteGetter, StorageEntryModifier};
+use sp_arithmetic::traits::SaturatedConversion;
 
 /// A type that allow to store a value.
 ///
@@ -217,6 +218,19 @@ impl<Prefix, Value, QueryKind, OnEmpty> StorageValueMetadata
 	const NAME: &'static str = Prefix::STORAGE_PREFIX;
 	const DEFAULT: DefaultByteGetter =
 		DefaultByteGetter(&OnEmptyGetter::<QueryKind::Query, OnEmpty>(core::marker::PhantomData));
+}
+
+impl<Prefix, Value, QueryKind, OnEmpty> StorageMaxEncodedLen
+	for StorageValue<Prefix, Value, QueryKind, OnEmpty> where
+	Prefix: StorageInstance,
+	Value: FullCodec + MaxEncodedLen,
+	QueryKind: QueryKindTrait<Value, OnEmpty>,
+	OnEmpty: crate::traits::Get<QueryKind::Query> + 'static
+{
+	fn storage_max_encoded_len() -> u32 {
+		Value::max_encoded_len()
+			.saturated_into()
+	}
 }
 
 #[cfg(test)]

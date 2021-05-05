@@ -25,9 +25,10 @@ use crate::{
 		bounded_vec::{BoundedVec, BoundedVecValue},
 		types::{OptionQuery, QueryKindTrait, OnEmptyGetter},
 	},
-	traits::{GetDefault, StorageInstance, Get},
+	traits::{GetDefault, StorageInstance, Get, MaxEncodedLen, StorageMaxEncodedLen},
 };
 use frame_metadata::{DefaultByteGetter, StorageEntryModifier};
+use sp_arithmetic::traits::SaturatedConversion;
 use sp_std::vec::Vec;
 
 /// A type that allow to store values for `(key1, key2)` couple. Similar to `StorageMap` but allow
@@ -464,6 +465,25 @@ impl<Prefix, Hasher1, Hasher2, Key1, Key2, Value, QueryKind, OnEmpty> StorageDou
 	const NAME: &'static str = Prefix::STORAGE_PREFIX;
 	const DEFAULT: DefaultByteGetter =
 		DefaultByteGetter(&OnEmptyGetter::<QueryKind::Query, OnEmpty>(core::marker::PhantomData));
+}
+
+impl<Prefix, Hasher1, Hasher2, Key1, Key2, Value, QueryKind, OnEmpty> StorageMaxEncodedLen
+	for StorageDoubleMap<Prefix, Hasher1, Key1, Hasher2, Key2, Value, QueryKind, OnEmpty> where
+	Prefix: StorageInstance,
+	Hasher1: crate::hash::StorageHasher,
+	Hasher2: crate::hash::StorageHasher,
+	Key1: FullCodec + MaxEncodedLen,
+	Key2: FullCodec + MaxEncodedLen,
+	Value: FullCodec + MaxEncodedLen,
+	QueryKind: QueryKindTrait<Value, OnEmpty>,
+	OnEmpty: crate::traits::Get<QueryKind::Query> + 'static
+{
+	fn storage_max_encoded_len() -> u32 {
+		Key1::max_encoded_len()
+			.saturating_add(Key2::max_encoded_len())
+			.saturating_add(Value::max_encoded_len())
+			.saturated_into()
+	}
 }
 
 #[cfg(test)]

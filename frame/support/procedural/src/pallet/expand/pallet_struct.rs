@@ -104,7 +104,35 @@ pub fn expand_pallet_struct(def: &mut Def) -> proc_macro2::TokenStream {
 
 	let storage_names = &def.storages.iter().map(|storage| &storage.ident).collect::<Vec<_>>();
 	let storage_cfg_attrs = &def.storages.iter().map(|storage| &storage.cfg_attrs).collect::<Vec<_>>();
-	let storage_max_values= &def.storages.iter().map(|storage| &storage.max_values).collect::<Vec<_>>();
+	let storage_max_values= &def.storages.iter()
+		.map(|storage| if let Some(max_values) = &storage.max_values {
+			quote::quote_spanned!(def.pallet_struct.attr_span => {
+				let max_values = (|| {
+					let max_values: u32 = #max_values;
+					max_values
+				})();
+				Some(max_values)
+			})
+		} else {
+			quote::quote!(None)
+		})
+		.collect::<Vec<_>>();
+
+	let storage_max_size = &def.storages.iter()
+		.map(|storage| if let Some(attr_span) = def.pallet_struct.set_storage_max_len {
+			let storage_name = &storage.ident;
+			quote::quote_spanned!(attr_span =>
+				Some(
+					<
+						#storage_name<#type_use_gen>
+						as #frame_support::traits::StorageMaxEncodedLen
+					>::storage_max_encoded_len()
+				)
+			)
+		} else {
+			quote::quote!(None)
+		})
+		.collect::<Vec<_>>();
 
 	quote::quote_spanned!(def.pallet_struct.attr_span =>
 		#module_error_metadata
@@ -181,6 +209,7 @@ pub fn expand_pallet_struct(def: &mut Def) -> proc_macro2::TokenStream {
 							#frame_support::traits::StorageInfo {
 								prefix: <#storage_names<#type_use_gen>>::final_prefix(),
 								max_values: #storage_max_values,
+								max_size: #storage_max_size,
 							}
 						},
 					)*

@@ -485,7 +485,6 @@ fn parse_storage_line_defs(
 		let max_values = match &line.storage_type {
 			DeclStorageType::Map(_) | DeclStorageType::DoubleMap(_) => {
 				line.max_values.inner.map(|i| i.expr.content)
-					.unwrap_or(syn::parse_quote!(u32::max_value()))
 			},
 			DeclStorageType::Simple(_) => {
 				if let Some(max_values) = line.max_values.inner {
@@ -493,7 +492,7 @@ fn parse_storage_line_defs(
 					let span = max_values.max_values_keyword.span();
 					return Err(syn::Error::new(span, msg));
 				} else {
-					syn::parse_quote!(1u32)
+					Some(syn::parse_quote!(1u32))
 				}
 			},
 		};

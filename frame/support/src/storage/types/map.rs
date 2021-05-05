@@ -25,9 +25,10 @@ use crate::{
 		bounded_vec::{BoundedVec, BoundedVecValue},
 		types::{OptionQuery, QueryKindTrait, OnEmptyGetter},
 	},
-	traits::{GetDefault, StorageInstance, Get},
+	traits::{GetDefault, StorageInstance, Get, MaxEncodedLen, StorageMaxEncodedLen},
 };
 use frame_metadata::{DefaultByteGetter, StorageEntryModifier};
+use sp_arithmetic::traits::SaturatedConversion;
 use sp_std::prelude::*;
 
 /// A type that allow to store value for given key. Allowing to insert/remove/iterate on values.
@@ -348,6 +349,22 @@ impl<Prefix, Hasher, Key, Value, QueryKind, OnEmpty> StorageMapMetadata
 	const NAME: &'static str = Prefix::STORAGE_PREFIX;
 	const DEFAULT: DefaultByteGetter =
 		DefaultByteGetter(&OnEmptyGetter::<QueryKind::Query, OnEmpty>(core::marker::PhantomData));
+}
+
+impl<Prefix, Hasher, Key, Value, QueryKind, OnEmpty> StorageMaxEncodedLen
+	for StorageMap<Prefix, Hasher, Key, Value, QueryKind, OnEmpty> where
+	Prefix: StorageInstance,
+	Hasher: crate::hash::StorageHasher,
+	Key: FullCodec + MaxEncodedLen,
+	Value: FullCodec + MaxEncodedLen,
+	QueryKind: QueryKindTrait<Value, OnEmpty>,
+	OnEmpty: crate::traits::Get<QueryKind::Query> + 'static
+{
+	fn storage_max_encoded_len() -> u32 {
+		Key::max_encoded_len()
+			.saturating_add(Value::max_encoded_len())
+			.saturated_into()
+	}
 }
 
 #[cfg(test)]

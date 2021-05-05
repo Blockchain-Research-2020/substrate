@@ -73,7 +73,7 @@ pub use hooks::GenesisBuild;
 
 pub mod schedule;
 mod storage;
-pub use storage::{Instance, StorageInstance, StoragesInfo, StorageInfo};
+pub use storage::{Instance, StorageInstance, StoragesInfo, StorageInfo, StorageMaxEncodedLen};
 
 mod dispatch;
 pub use dispatch::{EnsureOrigin, OriginTrait, UnfilteredDispatchable};
